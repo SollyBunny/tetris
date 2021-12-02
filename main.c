@@ -67,12 +67,12 @@ struct Block tiles[][4] = {
 	}, { //bar
 		{
 			{
-				0, 1, 0, 0,
-				0, 1, 0, 0,
-				0, 1, 0, 0,
-				0, 1, 0, 0
+				0, 0, 1, 0,
+				0, 0, 1, 0,
+				0, 0, 1, 0,
+				0, 0, 1, 0
 			}, {
-				1, 2, 0, 0
+				2, 1, 0, 0
 			}
 		}, {
 			{
@@ -301,7 +301,7 @@ unsigned int currentdir;
 
 void print() {
 
-	unsigned int x, y;
+	unsigned int x, y, t;
 
 	printf("\x1b[2J\x1b[H\x1b[48;5;1m");
 	for (y = 0; y < gridy; ++y) {
@@ -312,20 +312,32 @@ void print() {
 		putchar('\n');
 	}
 
-	y = (currentpos % gridx) ;
-	printf("\x1b[48;5;255m\x1b[%u;%uH", currentpos / gridx, y * 2 - 1);
+	y = (currentpos % (gridx + 3));
+	// if (y == 0)
+		// printf("%d\x1b[48;5;255m\x1b[%u;%uH", y, currentpos / gridx, 0);
+	// else
+		printf("%d\x1b[48;5;255m\x1b[%u;%uH", currentpos, currentpos / gridx, y * 2 - 5);
+
 	for (x = 0; x < 4 * 4; ++x) {
-		if (x % 4 == 0 && x != 0) {
-			//if (y == 0) 
-			printf("\x1b[1B\x1b[8D");
-			//else printf("\x1b[1B");
+
+		t = x % 4;
+
+		if (t == 0 && x != 0) {
+			// if (y == 0)
+				// printf("\x1b[1B");
+			// else
+				printf("\x1b[1B\x1b[8D");
 		}
+		
+		if (y < 3 && t < (3 - y)) continue; // dont render stuff off the left side
+		
 		if (tiles[currenttile][currentdir].data[x] == 1) {
 			putchar('#'); putchar('#');
 		} else {
 			printf("\x1b[2C");
-			//printf("__");
+			// printf("__"); // debug
 		}
+		
 	}
 	printf("\x1b[48;5;0m");
 	fflush(stdout);
@@ -334,17 +346,33 @@ void print() {
 
 void move(unsigned int newpos) {
 
-	if (currentpos % gridx > gridx / 2) {
-		if (((newpos - tiles[currenttile][currentdir].bounding[1]) % gridx) > gridx - 3) return;
+	unsigned int x = (newpos % (gridx + 3));
+
+	if (x > gridx / 2) {
+		while (x > tiles[currenttile][currentdir].bounding[1] + gridx - 1) {
+			newpos--;
+			x = (newpos % (gridx + 3));
+		}
 	} else {
-		if (((newpos - tiles[currenttile][currentdir].bounding[0] + 1) % gridx) > gridx - 3) return;
+		while (x < 3 - tiles[currenttile][currentdir].bounding[0]) {
+			newpos++;
+			x = (newpos % (gridx + 3));
+		}
 	}
 
+
+	if (newpos / (gridx + 3) > gridy - 7 - tiles[currenttile][currentdir].bounding[3]) {
+		print();
+		return;
+	}
 	
 	currentpos = newpos;
+
+	
 	// debug
-	if (currentpos > gridsize)
-		currentpos -= gridsize;
+	// while (currentpos > gridsize)
+		// currentpos -= 1;
+		// currentpos -= gridsize - 2;
 
 	print();	
 
@@ -352,7 +380,7 @@ void move(unsigned int newpos) {
 
 void input(void) {
 	while (1) {
-		move(currentpos + gridx);
+		move(currentpos + gridx + 3);
 		usleep(200000);
 	}
 }
@@ -387,10 +415,10 @@ int main(void) {
 
 	char c;
 	while ((c = getchar()) != BREAK) {
-		printf("%d", c);
+		// printf("%d, %d|", currentpos, c); // debug
 		switch (c) {
 			case KEYS:
-				move(currentpos + gridx);
+				move(currentpos + gridx + 3);
 				break;
 			case KEYA:
 				// if (currentpos % gridx == 1)

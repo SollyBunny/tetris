@@ -304,38 +304,64 @@ void print() {
 	unsigned int x, y, t;
 
 	printf("\x1b[2J\x1b[H\x1b[48;5;1m");
-	for (y = 0; y < gridy; ++y) {
-		for (x = 0; x < gridx; ++x) {
-			putchar(' ');
-			putchar(' ');
+	// for (y = 0; y < gridy; ++y) {
+	// 	for (x = 0; x < gridx; ++x) {
+	// 		if (grid[x])
+	// 			printf("\x1b[2C");
+	// 		else
+	// 			printf("AA");
+	// 		// putchar(' ');
+	// 		// putchar(' ');
+	// 	}
+	// 	putchar('\n');
+	// }
+	for (t = 0; t < gridsize; ++t) {
+
+		if (grid[t] == 1) {
+			printf("\x1b[48;5;240m");
+			do { // continue rendering tiles untill theres no more (or theres a newline)
+				putchar(' '); putchar(' '); 
+				if (t % gridx == gridx - 1) // TODO messy :P // same as line ~334
+					putchar('\n');	
+				++t;
+			} while ((grid[t] == 1));
+			printf("\x1b[48;5;1m");
+			--t;
+		} else {
+
+			printf("  ");
+			if (t % gridx == gridx - 1) // TODO messy :P
+				putchar('\n');	
+
 		}
-		putchar('\n');
+
 	}
 
 	y = (currentpos % (gridx + 3));
 	// if (y == 0)
 		// printf("%d\x1b[48;5;255m\x1b[%u;%uH", y, currentpos / gridx, 0);
 	// else
-		printf("%d\x1b[48;5;255m\x1b[%u;%uH", currentpos, currentpos / gridx, y * 2 - 5);
+	if (y - 3 > gridx) { // (t < 0) // compatibility with terminals with line wrap when you goto position -1
+		printf("\x1b[48;5;240m\x1b[%u;0H", (currentpos / (gridx + 3)));
+	} else {
+		printf("\x1b[48;5;240m\x1b[%u;%uH", (currentpos / (gridx + 3)), y * 2 - 5);
+	}
 
 	for (x = 0; x < 4 * 4; ++x) {
 
 		t = x % 4;
-
+		
 		if (t == 0 && x != 0) {
-			// if (y == 0)
-				// printf("\x1b[1B");
-			// else
-				printf("\x1b[1B\x1b[8D");
+			printf("\x1b[8D\x1b[1B");
 		}
 		
-		if (y < 3 && t < (3 - y)) continue; // dont render stuff off the left side
+		if (y < 3 && t < (3 - y)) continue;  // dont render stuff off the left side
 		
 		if (tiles[currenttile][currentdir].data[x] == 1) {
-			putchar('#'); putchar('#');
+			putchar(' '); putchar(' ');
 		} else {
 			printf("\x1b[2C");
-			// printf("__"); // debug
+			//printf("__"); // debug
 		}
 		
 	}
@@ -346,6 +372,7 @@ void print() {
 
 void move(unsigned int newpos) {
 
+	unsigned int i;
 	unsigned int x = (newpos % (gridx + 3));
 
 	if (x > gridx / 2) {
@@ -360,12 +387,11 @@ void move(unsigned int newpos) {
 		}
 	}
 
-
-	if (newpos / (gridx + 3) > gridy - 7 - tiles[currenttile][currentdir].bounding[3]) {
-		print();
-		return;
-	}
+	// calculate collision
+		if (newpos / (gridx + 3) > gridy - 3 - tiles[currenttile][currentdir].bounding[3]) goto movecollision;
 	
+		for (i = 0; i < )
+
 	currentpos = newpos;
 
 	
@@ -375,6 +401,34 @@ void move(unsigned int newpos) {
 		// currentpos -= gridsize - 2;
 
 	print();	
+
+	return;
+
+	movecollision:
+
+		// i = iterator for tile information
+		for (i = 0; i < 4 * 4; ++i) {
+			if (tiles[currenttile][currentdir].data[i]) {
+				grid[
+					( // y value
+						(currentpos / (gridx + 3)) +
+						(i / 4) - 
+						1
+					) * gridx
+					+ x
+					+ (i % 4)
+					- 3
+				] = 1;
+			}
+		}
+
+		currenttile = 2;
+		currentpos = gridx / 2;
+		currentdir = 0;
+
+		print();
+		
+	return;
 
 }
 

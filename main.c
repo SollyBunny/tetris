@@ -398,8 +398,65 @@ void tilereset() {
 	currenttile = rand() % 7;
 	currentpos = gridx / 2;
 	currentdir = 0;
-	currenttimeout = 0;
+	currenttimeout = tiletimeout;
 	print();
+}
+
+void movedir(unsigned int newdir) {
+
+	if      (newdir >  4) newdir = 3;
+	else if (newdir == 4) newdir = 0;
+	
+	unsigned int i;
+	unsigned int x = (currentpos % (gridx + 3));
+	unsigned int y = currentpos / (gridx + 3) + 1;
+
+	if (x > gridx / 2) {
+		while (x > tiles[currenttile][currentdir].bounding[1] + gridx - 1) {
+			currentpos--;
+			x = (currentpos % (gridx + 3));
+		}
+	} else {
+		while (x < 3 - tiles[currenttile][currentdir].bounding[0]) {
+			currentpos++;
+			x = (currentpos % (gridx + 3));
+		}
+	}
+
+	// skip out top chunk (seg fault prot)
+	if (y < 7) i = (7 - y) * 4;
+	else       i = 0; // probs redundant
+	
+	for (; i < 4 * 4; ++i) {
+
+		if (tiles[currenttile][currentdir].data[i]) {
+
+			while (grid[
+				( // y value
+					y
+					+ (i / 4)
+
+				) * gridx
+				+ x
+				+ (i % 4)
+				- 3
+			]) {
+				y--;
+				currentpos -= gridx;
+				currentpos -= 3;
+			}
+
+		}
+
+	}
+
+	currentdir = newdir;
+	currenttimeout = tiletimeout;
+
+	print();
+
+	return;
+
 }
 
 void movedown() {
@@ -457,18 +514,9 @@ void movedown() {
 
 	movecollision:
 
-		if (currenttimeout == 0) {
-			currenttimeout = tiletimeout;
-			// currentpos -= gridx;
-			// currentpos -= 3;
-			return;
-		}
+		if (currenttimeout == 0) currenttimeout = tiletimeout;
 		currenttimeout--;
-		if (currenttimeout > 0) {
-			// currentpos -= gridx;
-			// currentpos -= 3;
-			return;	
-		}
+		if (currenttimeout > 0) return;	
 
 		for (i = 0; i < 4 * 4; ++i) {
 			if (tiles[currenttile][currentdir].data[i]) {
@@ -521,20 +569,19 @@ void move(unsigned int newpos) {
 				( // y value
 					y
 					+ (i / 4)
-					- 2
+					- 4
 				) * gridx
-				+ x
+				+ (newpos % (gridx + 3))
 				+ (i % 4)
 				- 3
 			]) {
-				y--;
-				newpos -= gridx;
-				newpos -= 3;	
+				return;
 			};
 
 		}
 	}
 
+	currenttimeout = tiletimeout;
 	currentpos = newpos;
 	
 	print();	
@@ -553,7 +600,7 @@ int main(void) {
 	time_t _t;
 	srand(time(&_t));
 
-	gridx = 20;//10;
+	gridx = 15;//10;
 	gridy = 21;
 	gridsize = gridx * gridy;
 
@@ -589,26 +636,18 @@ int main(void) {
 			case KEYA:
 				// if (currentpos % gridx == 1)
 					// break;
-				currenttimeout = 0;
 				move(currentpos - 1);
 				break;
 			case KEYD:
 				// if (currentpos % gridx == gridx - 2)
 					// break;
-				currenttimeout = 0;
 				move(currentpos + 1);
 				break;
 			case KEYQ:
-				currentdir++;	
-				if (currentdir >= 4) currentdir = 0;
-				move(currentpos);
-				print();
+				movedir(currentdir + 1);
 				continue;
 			case KEYE:
-				currentdir--;	
-				if (currentdir >= 4) currentdir = 3;
-				move(currentpos);
-				print();
+				movedir(currentdir - 1);
 				continue;
 		}
 

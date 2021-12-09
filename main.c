@@ -162,20 +162,20 @@ struct Block tiles[][4] = {
 		}, {
 			{
 				0, 0, 0, 0,
+				0, 0, 0, 0,
 				1, 1, 0, 0,
-				0, 1, 1, 0,
-				0, 0, 0, 0
+				0, 1, 1, 0
 			}, {
-				0, 1, 1, 1
+				0, 1, 2, 0
 			}
 		}, {
 			{
 				0, 0, 0, 0,
-				0, 1, 0, 0,
-				1, 1, 0, 0,
-				1, 0, 0, 0
+				0, 0, 1, 0,
+				0, 1, 1, 0,
+				0, 1, 0, 0
 			}, {
-				0, 2, 1, 0
+				1, 1, 1, 0
 			}
 		}
 	}, { //L
@@ -305,9 +305,12 @@ unsigned int tilescolor[] = {
 	93 //t
 };
 
+#define tiletimeout 5;
+
 unsigned int currenttile;
 unsigned int currentpos;
 unsigned int currentdir;
+unsigned int currenttimeout;
 
 struct termios term, restore;
 void sexit() {
@@ -395,6 +398,7 @@ void tilereset() {
 	currenttile = rand() % 7;
 	currentpos = gridx / 2;
 	currentdir = 0;
+	currenttimeout = 0;
 	print();
 }
 
@@ -408,7 +412,7 @@ void movedown() {
 	if (
 		y > gridy - 3 &&
 		y > gridy + tiles[currenttile][currentdir].bounding[3]
-	) goto movecollisionignorebottom;
+	) goto movecollision;
 
 	// skip out top chunk (seg fault prot)
 	if (y < 7) i = (7 - y) * 4;
@@ -428,7 +432,17 @@ void movedown() {
 				+ x
 				+ (i % 4)
 				- 3
-			]) goto movecollision;
+			]) {
+				if (y < 5) {
+					if (currenttile == 6) currenttile = 0;
+					else currenttile++;
+					currentpos = gridx * 1.5 + 3;
+					currentdir = 0;
+					print();
+					sexit();
+				}
+				goto movecollision;
+			}
 
 		}
 
@@ -443,16 +457,18 @@ void movedown() {
 
 	movecollision:
 
-		if (y < 5) {
-			if (currenttile == 6) currenttile = 0;
-			else currenttile++;
-			currentpos = gridx * 1.5 + 3;
-			currentdir = 0;
-			print();
-			sexit();
+		if (currenttimeout == 0) {
+			currenttimeout = tiletimeout;
+			// currentpos -= gridx;
+			// currentpos -= 3;
+			return;
 		}
-
-	movecollisionignorebottom:
+		currenttimeout--;
+		if (currenttimeout > 0) {
+			// currentpos -= gridx;
+			// currentpos -= 3;
+			return;	
+		}
 
 		for (i = 0; i < 4 * 4; ++i) {
 			if (tiles[currenttile][currentdir].data[i]) {
@@ -479,7 +495,7 @@ void move(unsigned int newpos) {
 
 	unsigned int i;
 	unsigned int x = (newpos % (gridx + 3));
-	unsigned int y = y = currentpos / (gridx + 3);
+	unsigned int y = newpos / (gridx + 3);
 
 	// calc collsion left/right
 	if (x > gridx / 2) {
@@ -501,16 +517,21 @@ void move(unsigned int newpos) {
 	for (; i < 4 * 4; ++i) {
 		if (tiles[currenttile][currentdir].data[i]) {
 
-			if (grid[
+			while (grid[
 				( // y value
 					y
 					+ (i / 4)
-					- 3
+					- 2
 				) * gridx
 				+ x
 				+ (i % 4)
 				- 3
-			]) return;
+			]) {
+				y--;
+				newpos -= gridx;
+				newpos -= 3;	
+			};
+
 		}
 	}
 
@@ -532,7 +553,7 @@ int main(void) {
 	time_t _t;
 	srand(time(&_t));
 
-	gridx = 10;
+	gridx = 20;//10;
 	gridy = 21;
 	gridsize = gridx * gridy;
 
@@ -562,27 +583,32 @@ int main(void) {
 		// printf("%d, %d|", currentpos, c); // debug
 		switch (c) {
 			case KEYS:
+				currenttimeout = 1;
 				movedown();
 				break;
 			case KEYA:
 				// if (currentpos % gridx == 1)
 					// break;
+				currenttimeout = 0;
 				move(currentpos - 1);
 				break;
 			case KEYD:
 				// if (currentpos % gridx == gridx - 2)
 					// break;
+				currenttimeout = 0;
 				move(currentpos + 1);
 				break;
 			case KEYQ:
 				currentdir++;	
 				if (currentdir >= 4) currentdir = 0;
 				move(currentpos);
+				print();
 				continue;
 			case KEYE:
 				currentdir--;	
 				if (currentdir >= 4) currentdir = 3;
 				move(currentpos);
+				print();
 				continue;
 		}
 

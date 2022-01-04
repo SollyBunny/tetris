@@ -392,10 +392,42 @@ void print() {
 
 }
 
+// TODO lmao doesnt work
+void linecheck() {
+
+	unsigned int y = 0;
+
+	for (; y < gridy; ++y) {
+
+		for (unsigned int x = 0; x < gridx; ++x) {
+
+			if (grid[y * gridx + x]	!= 0) {
+				goto nonfullline;
+			}
+
+		}
+
+		goto fullline;
+
+		nonfullline:
+			continue;
+
+	}
+
+	return;
+
+	fullline:
+
+		printf("Line %d fill\n", y);
+
+		exit(0);
+
+}
+
 void tilereset() {
 	// if (currenttile == 6) currenttile = 0;
 	// else currenttile++;
-	currenttile = rand() % 7;
+	currenttile = 6;//rand() % 7;
 	currentpos = gridx / 2;
 	currentdir = 0;
 	currenttimeout = tiletimeout;
@@ -406,20 +438,21 @@ void movedir(unsigned int newdir) {
 
 	if      (newdir >  4) newdir = 3;
 	else if (newdir == 4) newdir = 0;
-	
+
 	unsigned int i;
+	unsigned int newpos = currentpos;
 	unsigned int x = (currentpos % (gridx + 3));
 	unsigned int y = currentpos / (gridx + 3) + 1;
 
-	if (x > gridx / 2) {
-		while (x > tiles[currenttile][currentdir].bounding[1] + gridx - 1) {
-			currentpos--;
-			x = (currentpos % (gridx + 3));
+	if (x > gridx / 2 + tiles[currenttile][currentdir].bounding[1] - 1) {
+		if (x > gridx) {
+			newpos -= tiles[currenttile][currentdir].bounding[1] - 1;
+			x      -= tiles[currenttile][currentdir].bounding[1] - 1;
 		}
 	} else {
-		while (x < 3 - tiles[currenttile][currentdir].bounding[0]) {
-			currentpos++;
-			x = (currentpos % (gridx + 3));
+		if (x < tiles[currenttile][currentdir].bounding[0] + 3) {
+			newpos += x - tiles[currenttile][currentdir].bounding[0];
+			x      += x - tiles[currenttile][currentdir].bounding[0];
 		}
 	}
 
@@ -429,21 +462,42 @@ void movedir(unsigned int newdir) {
 	
 	for (; i < 4 * 4; ++i) {
 
-		if (tiles[currenttile][currentdir].data[i]) {
+		if (tiles[currenttile][newdir].data[i]) {
 
 			while (grid[
 				( // y value
 					y
 					+ (i / 4)
-
+					- 4
 				) * gridx
 				+ x
 				+ (i % 4)
 				- 3
 			]) {
 				y--;
-				currentpos -= gridx;
-				currentpos -= 3;
+				newpos -= gridx;
+				newpos -= 3;
+			}
+
+		}
+
+	}
+
+	for (; i < 4 * 4; ++i) {
+
+		if (tiles[currenttile][newdir].data[i]) {
+
+			while (grid[
+				( // y value
+					y
+					+ (i / 4)
+					- 4
+				) * gridx
+				+ x
+				+ (i % 4)
+				- 3
+			]) {
+				return;
 			}
 
 		}
@@ -451,11 +505,10 @@ void movedir(unsigned int newdir) {
 	}
 
 	currentdir = newdir;
+	currentpos = newpos;
 	currenttimeout = tiletimeout;
 
 	print();
-
-	return;
 
 }
 
